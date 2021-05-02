@@ -104,6 +104,42 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
   };
 }
 
+fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
+  let mut args = args.into_iter().skip(1);
+  if (args.len()) != 1 {
+    return Err(RedisError::WrongArity);
+  }
+
+  let src = args.next_string()?;
+  let key = ctx.open_key(&src);
+  let ktype = key.key_type();
+
+  match ktype {
+    KeyType::Hash => {
+      let hgetall = ctx.call("HGETALL", &[&src]);
+      match hgetall {
+        Ok(RedisValue::Array(array)) => {
+          let hashmap: HashMap<String, String> = vec_to_hashmap(array);
+          let titles = Vec::from_iter(hashmap.keys());
+          let titles_row = Row::from(titles);
+          let values = Vec::from_iter(hashmap.values());
+          let values_row = Row::from(values);
+          let mut table = Table::new();
+          table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+          table.set_titles(titles_row);
+          table.add_row(values_row);
+          let to_csv = String::from_utf8(table.to_csv(Vec::new()).unwrap().into_inner().unwrap()).unwrap();
+
+          return Ok(RedisValue::SimpleString(to_csv));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    }
+    _ => return Err(RedisError::WrongType),
+  };
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -112,7 +148,8 @@ redis_module! {
     data_types: [],
     commands: [
         ["pp.j", pp_j, "", 0, 0, 0],
-        ["pp.t", pp_t, "", 0, 0, 0]
+        ["pp.t", pp_t, "", 0, 0, 0],
+        ["pp.c", pp_c, "", 0, 0, 0]
     ],
 }
 
