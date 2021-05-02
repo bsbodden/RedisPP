@@ -5,6 +5,7 @@ RedisPP (RePP) is a [Redis](https://redis.io/) module that adds Pretty Printing 
 ## Primary features:
 
 * Colorized and formatted JSON output for: Hashes
+* ASCII Table output for: Hashes
 
 ## Commands
 
@@ -17,6 +18,16 @@ PP.J hashy.hash:001
 ```
 
 ![PP.J](/docs/screenshots/pp.j.hash.png "PP.J w/ Hash")
+
+### `PP.T` - Pretty-Print as ASCII Tables
+
+Use `PP.T` to pretty-print a Redis Hash as an ASCII table:
+
+```
+PP.T hashy.hash:001
+```
+
+![PP.T](/docs/screenshots/pp.t.hash.png "PP.T w/ Hash")
 
 ## Build
 
