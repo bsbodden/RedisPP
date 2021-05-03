@@ -68,6 +68,26 @@ fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
+    },
+    KeyType::List => {
+      let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
+      match lrange {
+        Ok(RedisValue::Array(array)) => {
+          let list: Vec<String> = extract_strings(array);
+          let json = serde_json::to_string_pretty(&list)?;
+          let colorized = colorizer.colorize_json_str(&json.to_string());
+
+          return Ok(RedisValue::SimpleString(colorized.unwrap()));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    },
+          return Ok(RedisValue::SimpleString(colorized.unwrap()));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
     }
     _ => return Err(RedisError::WrongType),
   };

@@ -21,6 +21,15 @@ PP.J hashy.hash:001
 
 ![PP.J](/docs/screenshots/pp.j.hash.png "PP.J w/ Hash")
 
+Use `PP.J` to pretty-print a Redis List as colorized JSON, it uses `LRANGE list 0 -1` by
+default:
+
+```
+PP.J listy.list:001
+```
+
+![PP.J](/docs/screenshots/pp.j.list.png "PP.J w/ List")
+
 ### `PP.T` - Pretty-Print as ASCII Tables
 
 Use `PP.T` to pretty-print a Redis Hash as an ASCII table:
