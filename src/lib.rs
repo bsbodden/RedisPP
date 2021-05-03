@@ -4,6 +4,8 @@ extern crate build_html;
 extern crate json_color;
 extern crate prettytable;
 
+mod utils;
+
 use build_html::*;
 use itertools::Itertools;
 use itertools::Tuples;
@@ -13,6 +15,7 @@ use redis_module::raw::KeyType;
 use redis_module::{Context, NextArg, RedisError, RedisResult, RedisValue};
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use utils::TextNode;
 
 fn is_string(v: RedisValue) -> Option<String> {
   match v {
@@ -270,7 +273,24 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    }
+    },
+    KeyType::List => {
+      let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
+      match lrange {
+        Ok(RedisValue::Array(array)) => {
+          let list: Vec<String> = extract_strings(array);
+          let mut html_list = build_html::Container::new(ContainerType::OrderedList);
+          for e in list {
+            let text_node = TextNode{ content: e };
+            html_list = html_list.add_html(Box::new(text_node));
+          }
+
+          return Ok(RedisValue::SimpleString(html_list.to_html_string()));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    },
     _ => return Err(RedisError::WrongType),
   };
 }

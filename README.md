@@ -105,6 +105,15 @@ PP.H hashy.hash:001
 
 ![PP.H](/docs/screenshots/pp.h.hash.png "PP.H w/ Hash")
 
+Use `PP.H` to pretty-print a Redis List as HTML, it uses `LRANGE list 0 -1` by
+default and it generates an HTML unordered list `<ol><li>`:
+
+```
+PP.H listy.list:001
+```
+
+![PP.H](/docs/screenshots/pp.h.list.png "PP.H w/ List")
+
 ## Build
 
 Make sure you have Rust installed:
