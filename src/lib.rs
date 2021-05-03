@@ -291,6 +291,23 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
     },
+    KeyType::Set => {
+      let smembers = ctx.call("SMEMBERS", &[&src]);
+      match smembers {
+        Ok(RedisValue::Array(array)) => {
+          let set: Vec<String> = extract_strings(array);
+          let mut html_list = build_html::Container::new(ContainerType::UnorderedList);
+          for e in set {
+            let text_node = TextNode{ content: e };
+            html_list = html_list.add_html(Box::new(text_node));
+          }
+
+          return Ok(RedisValue::SimpleString(html_list.to_html_string()));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    },
     _ => return Err(RedisError::WrongType),
   };
 }

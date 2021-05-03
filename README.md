@@ -136,6 +136,17 @@ PP.H listy.list:001
 
 ![PP.H](/docs/screenshots/pp.h.list.png "PP.H w/ List")
 
+#### Sets
+
+Use `PP.h` to pretty-print a Redis Set as HTML, it uses `SMEMBERS` by
+default:
+
+```
+PP.H setty.set:001
+```
+
+![PP.H](/docs/screenshots/pp.h.set.png "PP.H w/ Set")
+
 ## Build
 
 Make sure you have Rust installed:
