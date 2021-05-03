@@ -58,6 +58,15 @@ PP.T listy.list:001
 
 ![PP.T](/docs/screenshots/pp.t.list.png "PP.T w/ List")
 
+Use `PP.T` to pretty-print a Redis Set as an ASCII table, it uses `SMEMBERS` by
+default:
+
+```
+PP.T setty.set:001
+```
+
+![PP.T](/docs/screenshots/pp.t.set.png "PP.T w/ Set")
+
 ### `PP.C` - Print as CSV
 
 Use `PP.C` to print a Redis Hash as CSV:

@@ -148,6 +148,22 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
     },
+    KeyType::Set => {
+      let smembers = ctx.call("SMEMBERS", &[&src]);
+      match smembers {
+        Ok(RedisValue::Array(array)) => {
+          let set: Vec<String> = extract_strings(array);
+          let values_row = Row::from(set);
+          let mut table = Table::new();
+          table.set_format(*format::consts::FORMAT_NO_LINESEP);
+          table.add_row(values_row);
+
+          return Ok(RedisValue::SimpleString(table.to_string()));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    },
     _ => return Err(RedisError::WrongType),
   };
 }
