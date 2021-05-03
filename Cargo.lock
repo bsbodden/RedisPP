@@ -106,6 +106,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "build_html"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63543832774ef6337ec31d736d17d42806ee59738550c6d63bc60f831c0e2cd2"
+
+[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -515,6 +521,7 @@ checksum = "00efb87459ba4f6fb2169d20f68565555688e1250ee6825cdf6254f8b48fafb2"
 name = "repp"
 version = "0.1.0"
 dependencies = [
+ "build_html",
  "itertools",
  "json-color",
  "prettytable-rs",
