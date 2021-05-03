@@ -49,6 +49,15 @@ PP.T hashy.hash:001
 
 ![PP.T](/docs/screenshots/pp.t.hash.png "PP.T w/ Hash")
 
+Use `PP.T` to pretty-print a Redis List as an ASCII table, it uses `LRANGE list 0 -1` by
+default:
+
+```
+PP.T listy.list:001
+```
+
+![PP.T](/docs/screenshots/pp.t.list.png "PP.T w/ List")
+
 ### `PP.C` - Print as CSV
 
 Use `PP.C` to print a Redis Hash as CSV:

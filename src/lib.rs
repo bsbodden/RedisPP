@@ -96,7 +96,7 @@ fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    }
+    },
     _ => return Err(RedisError::WrongType),
   };
 }
@@ -131,7 +131,23 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    }
+    },
+    KeyType::List => {
+      let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
+      match lrange {
+        Ok(RedisValue::Array(array)) => {
+          let list: Vec<String> = extract_strings(array);
+          let values_row = Row::from(list);
+          let mut table = Table::new();
+          table.set_format(*format::consts::FORMAT_NO_LINESEP);
+          table.add_row(values_row);
+
+          return Ok(RedisValue::SimpleString(table.to_string()));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    },
     _ => return Err(RedisError::WrongType),
   };
 }
