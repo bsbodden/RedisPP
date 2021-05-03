@@ -30,6 +30,15 @@ PP.J listy.list:001
 
 ![PP.J](/docs/screenshots/pp.j.list.png "PP.J w/ List")
 
+Use `PP.J` to pretty-print a Redis Set as colorized JSON, it uses `SMEMBERS` by
+default:
+
+```
+PP.J setty.set:001
+```
+
+![PP.J](/docs/screenshots/pp.j.set.png "PP.J w/ Set")
+
 ### `PP.T` - Pretty-Print as ASCII Tables
 
 Use `PP.T` to pretty-print a Redis Hash as an ASCII table:
