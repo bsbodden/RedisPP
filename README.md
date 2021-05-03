@@ -86,6 +86,15 @@ PP.C listy.list:001
 
 ![PP.C](/docs/screenshots/pp.c.list.png "PP.C w/ List")
 
+Use `PP.C` to pretty-print a Redis Set as CSV, it uses `SMEMBERS` by
+default:
+
+```
+PP.C setty.set:001
+```
+
+![PP.C](/docs/screenshots/pp.c.set.png "PP.C w/ Set")
+
 ### `PP.H` - Print as HTML snippet
 
 Use `PP.H` to print a Redis Hash as HTML (HTML Table):
