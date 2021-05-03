@@ -77,6 +77,15 @@ PP.C hashy.hash:001
 
 ![PP.C](/docs/screenshots/pp.c.hash.png "PP.C w/ Hash")
 
+Use `PP.C` to pretty-print a Redis List as CSV, it uses `LRANGE list 0 -1` by
+default:
+
+```
+PP.C listy.list:001
+```
+
+![PP.C](/docs/screenshots/pp.c.list.png "PP.C w/ List")
+
 ### `PP.H` - Print as HTML snippet
 
 Use `PP.H` to print a Redis Hash as HTML (HTML Table):

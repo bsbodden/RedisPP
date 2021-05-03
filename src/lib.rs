@@ -200,7 +200,25 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    }
+    },
+    KeyType::List => {
+      let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
+      match lrange {
+        Ok(RedisValue::Array(array)) => {
+          let list: Vec<String> = extract_strings(array);
+          let values_row = Row::from(list);
+          let mut table = Table::new();
+          table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+          table.add_row(values_row);
+          let to_csv =
+            String::from_utf8(table.to_csv(Vec::new()).unwrap().into_inner().unwrap()).unwrap();
+
+          return Ok(RedisValue::SimpleString(to_csv));
+        }
+        Ok(_) => return Ok(RedisValue::Null),
+        Err(_) => return Err(RedisError::Str("ERR key not found")),
+      }
+    },
     _ => return Err(RedisError::WrongType),
   };
 }
