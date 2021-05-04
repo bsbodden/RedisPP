@@ -163,7 +163,7 @@ cargo build
 ### Linux
 
 ```
-redis-server --loadmodule ./target/release/librepp.so
+redis-server --loadmodule ./target/debug/librepp.so
 ```
 
 ### Mac OS
