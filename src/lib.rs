@@ -73,6 +73,28 @@ fn to_titled_ascii_table(values: Vec<&String>, titles: Vec<&String>) -> Table {
   table
 }
 
+fn html_table_from_hashmap(hashmap: HashMap<String,String>) -> String {
+  let titles = Vec::from_iter(hashmap.keys());
+  let values = Vec::from_iter(hashmap.values());
+
+  let source_table = [values];
+  let html_table = build_html::Table::from(&source_table)
+    .add_header_row(&titles)
+    .to_html_string();
+
+  return html_table;
+}
+
+fn html_list_from_vector(list: Vec<String>, ctype: ContainerType) -> String {
+  let mut html_list = build_html::Container::new(ctype);
+  for e in list {
+    let text_node = TextNode { content: e };
+    html_list = html_list.add_html(Box::new(text_node));
+  }
+
+  return html_list.to_html_string();
+}
+
 fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
   if (args.len()) != 1 {
@@ -260,15 +282,8 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
       match hgetall {
         Ok(RedisValue::Array(array)) => {
           let hashmap: HashMap<String, String> = vec_to_hashmap(array);
-          let titles = Vec::from_iter(hashmap.keys());
-          let values = Vec::from_iter(hashmap.values());
 
-          let source_table = [values];
-          let html_table = build_html::Table::from(&source_table)
-            .add_header_row(&titles)
-            .to_html_string();
-
-          return Ok(RedisValue::SimpleString(html_table));
+          return Ok(RedisValue::SimpleString(html_table_from_hashmap(hashmap)));
         }
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
@@ -279,13 +294,8 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
       match lrange {
         Ok(RedisValue::Array(array)) => {
           let list: Vec<String> = extract_strings(array);
-          let mut html_list = build_html::Container::new(ContainerType::OrderedList);
-          for e in list {
-            let text_node = TextNode { content: e };
-            html_list = html_list.add_html(Box::new(text_node));
-          }
 
-          return Ok(RedisValue::SimpleString(html_list.to_html_string()));
+          return Ok(RedisValue::SimpleString(html_list_from_vector(list, ContainerType::OrderedList)));
         }
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
@@ -296,13 +306,8 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
       match smembers {
         Ok(RedisValue::Array(array)) => {
           let set: Vec<String> = extract_strings(array);
-          let mut html_list = build_html::Container::new(ContainerType::UnorderedList);
-          for e in set {
-            let text_node = TextNode { content: e };
-            html_list = html_list.add_html(Box::new(text_node));
-          }
 
-          return Ok(RedisValue::SimpleString(html_list.to_html_string()));
+          return Ok(RedisValue::SimpleString(html_list_from_vector(set, ContainerType::UnorderedList)));
         }
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
