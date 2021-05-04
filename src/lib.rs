@@ -9,16 +9,16 @@ mod html;
 mod json;
 mod utils;
 
+use build_html::*;
 use redis_module::raw::KeyType;
-use redis_module::{Context, NextArg, RedisError, RedisResult, RedisValue};
+use redis_module::{Context, NextArg, RedisError, RedisResult};
 use std::collections::HashMap;
 use std::iter::FromIterator;
-use build_html::*;
 
+use ascii::ascii::{to_ascii_table, to_titled_ascii_table};
+use html::html::{html_list_from_vector, html_table_from_hashmap};
 use json::json::to_colorized_json;
-use ascii::ascii::{to_ascii_table,to_titled_ascii_table};
-use html::html::{html_table_from_hashmap,html_list_from_vector};
-use utils::utils::{extract_strings,vec_to_hashmap};
+use utils::utils::{extract_strings, process_redis_result, vec_to_hashmap};
 
 fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
@@ -33,42 +33,26 @@ fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      match hgetall {
-        Ok(RedisValue::Array(array)) => {
-          let hashmap: HashMap<String, String> = vec_to_hashmap(array);
-          let colorized = to_colorized_json(&hashmap);
-
-          return Ok(RedisValue::SimpleString(colorized.unwrap()));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+      return process_redis_result(hgetall, |array| {
+        let hashmap: HashMap<String, String> = vec_to_hashmap(array);
+        return to_colorized_json(&hashmap).unwrap();
+      });
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      match lrange {
-        Ok(RedisValue::Array(array)) => {
-          let list: Vec<String> = extract_strings(array);
-          let colorized = to_colorized_json(&list);
+      return process_redis_result(lrange, |array| {
+        let list: Vec<String> = extract_strings(array);
 
-          return Ok(RedisValue::SimpleString(colorized.unwrap()));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_colorized_json(&list).unwrap();
+      });
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      match smembers {
-        Ok(RedisValue::Array(array)) => {
-          let list: Vec<String> = extract_strings(array);
-          let colorized = to_colorized_json(&list);
+      return process_redis_result(smembers, |array| {
+        let set: Vec<String> = extract_strings(array);
 
-          return Ok(RedisValue::SimpleString(colorized.unwrap()));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_colorized_json(&set).unwrap();
+      });
     }
     _ => return Err(RedisError::WrongType),
   };
@@ -87,43 +71,43 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      match hgetall {
-        Ok(RedisValue::Array(array)) => {
-          let hashmap: HashMap<String, String> = vec_to_hashmap(array);
-          let titles = Vec::from_iter(hashmap.keys());
-          let values = Vec::from_iter(hashmap.values());
+      return process_redis_result(hgetall, |array| {
+        let hashmap: HashMap<String, String> = vec_to_hashmap(array);
+        let titles = Vec::from_iter(hashmap.keys());
+        let values = Vec::from_iter(hashmap.values());
 
-          return Ok(RedisValue::SimpleString(to_titled_ascii_table(values, titles).to_string()));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_titled_ascii_table(values, titles).to_string();
+      });
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      match lrange {
-        Ok(RedisValue::Array(array)) => {
-          let strings = extract_strings(array);
-          let list = strings.iter().map(|s| { let s: &String = s; s }).collect();
+      return process_redis_result(lrange, |array| {
+        let strings = extract_strings(array);
+        let list = strings
+          .iter()
+          .map(|s| {
+            let s: &String = s;
+            s
+          })
+          .collect();
 
-          return Ok(RedisValue::SimpleString(to_ascii_table(list).to_string()));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_ascii_table(list).to_string();
+      });
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      match smembers {
-        Ok(RedisValue::Array(array)) => {
-          let strings: Vec<String> = extract_strings(array);
-          let set = strings.iter().map(|s| { let s: &String = s; s }).collect();
+      return process_redis_result(smembers, |array| {
+        let strings: Vec<String> = extract_strings(array);
+        let set = strings
+          .iter()
+          .map(|s| {
+            let s: &String = s;
+            s
+          })
+          .collect();
 
-          return Ok(RedisValue::SimpleString(to_ascii_table(set).to_string()));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_ascii_table(set).to_string();
+      });
     }
     _ => return Err(RedisError::WrongType),
   };
@@ -142,50 +126,68 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      match hgetall {
-        Ok(RedisValue::Array(array)) => {
-          let hashmap: HashMap<String, String> = vec_to_hashmap(array);
-          let titles = Vec::from_iter(hashmap.keys());
-          let values = Vec::from_iter(hashmap.values());
+      return process_redis_result(hgetall, |array| {
+        let hashmap: HashMap<String, String> = vec_to_hashmap(array);
+        let titles = Vec::from_iter(hashmap.keys());
+        let values = Vec::from_iter(hashmap.values());
 
-          let to_csv =
-            String::from_utf8(to_titled_ascii_table(values, titles).to_csv(Vec::new()).unwrap().into_inner().unwrap()).unwrap();
+        let to_csv = String::from_utf8(
+          to_titled_ascii_table(values, titles)
+            .to_csv(Vec::new())
+            .unwrap()
+            .into_inner()
+            .unwrap(),
+        )
+        .unwrap();
 
-          return Ok(RedisValue::SimpleString(to_csv));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_csv;
+      });
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      match lrange {
-        Ok(RedisValue::Array(array)) => {
-          let strings: Vec<String> = extract_strings(array);
-          let list = strings.iter().map(|s| { let s: &String = s; s }).collect();
-          let to_csv =
-            String::from_utf8(to_ascii_table(list).to_csv(Vec::new()).unwrap().into_inner().unwrap()).unwrap();
+      return process_redis_result(lrange, |array| {
+        let strings: Vec<String> = extract_strings(array);
+        let list = strings
+          .iter()
+          .map(|s| {
+            let s: &String = s;
+            s
+          })
+          .collect();
+        let to_csv = String::from_utf8(
+          to_ascii_table(list)
+            .to_csv(Vec::new())
+            .unwrap()
+            .into_inner()
+            .unwrap(),
+        )
+        .unwrap();
 
-          return Ok(RedisValue::SimpleString(to_csv));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_csv;
+      });
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      match smembers {
-        Ok(RedisValue::Array(array)) => {
-          let strings: Vec<String> = extract_strings(array);
-          let set = strings.iter().map(|s| { let s: &String = s; s }).collect();
-          let to_csv =
-            String::from_utf8(to_ascii_table(set).to_csv(Vec::new()).unwrap().into_inner().unwrap()).unwrap();
+      return process_redis_result(smembers, |array| {
+        let strings: Vec<String> = extract_strings(array);
+        let set = strings
+          .iter()
+          .map(|s| {
+            let s: &String = s;
+            s
+          })
+          .collect();
+        let to_csv = String::from_utf8(
+          to_ascii_table(set)
+            .to_csv(Vec::new())
+            .unwrap()
+            .into_inner()
+            .unwrap(),
+        )
+        .unwrap();
 
-          return Ok(RedisValue::SimpleString(to_csv));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return to_csv;
+      });
     }
     _ => return Err(RedisError::WrongType),
   };
@@ -204,39 +206,27 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      match hgetall {
-        Ok(RedisValue::Array(array)) => {
-          let hashmap: HashMap<String, String> = vec_to_hashmap(array);
+      return process_redis_result(hgetall, |array| {
+        let hashmap: HashMap<String, String> = vec_to_hashmap(array);
 
-          return Ok(RedisValue::SimpleString(html_table_from_hashmap(hashmap)));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return html_table_from_hashmap(hashmap);
+      });
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      match lrange {
-        Ok(RedisValue::Array(array)) => {
-          let list: Vec<String> = extract_strings(array);
+      return process_redis_result(lrange, |array| {
+        let list: Vec<String> = extract_strings(array);
 
-          return Ok(RedisValue::SimpleString(html_list_from_vector(list, ContainerType::OrderedList)));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return html_list_from_vector(list, ContainerType::OrderedList);
+      });
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      match smembers {
-        Ok(RedisValue::Array(array)) => {
-          let set: Vec<String> = extract_strings(array);
+      return process_redis_result(smembers, |array| {
+        let set: Vec<String> = extract_strings(array);
 
-          return Ok(RedisValue::SimpleString(html_list_from_vector(set, ContainerType::UnorderedList)));
-        }
-        Ok(_) => return Ok(RedisValue::Null),
-        Err(_) => return Err(RedisError::Str("ERR key not found")),
-      }
+        return html_list_from_vector(set, ContainerType::UnorderedList);
+      });
     }
     _ => return Err(RedisError::WrongType),
   };

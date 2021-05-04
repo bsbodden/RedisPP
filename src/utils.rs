@@ -1,7 +1,7 @@
 pub mod utils {
   use itertools::Itertools;
   use itertools::Tuples;
-  use redis_module::RedisValue;
+  use redis_module::{RedisError, RedisValue};
   use std::collections::HashMap;
 
   pub(crate) fn is_string(v: RedisValue) -> Option<String> {
@@ -24,5 +24,20 @@ pub mod utils {
 
     let hashmap: HashMap<String, String> = tuples.collect();
     hashmap
+  }
+
+  pub(crate) fn process_redis_result(
+    source: Result<RedisValue, RedisError>,
+    handler: fn(Vec<redis_module::RedisValue>) -> String,
+  ) -> Result<RedisValue, RedisError> {
+    match source {
+      Ok(RedisValue::Array(array)) => {
+        let result = handler(array);
+
+        return Ok(RedisValue::SimpleString(result));
+      }
+      Ok(_) => return Ok(RedisValue::Null),
+      Err(_) => return Err(RedisError::Str("ERR key not found")),
+    }
   }
 }
