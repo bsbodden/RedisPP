@@ -13,6 +13,7 @@ use json_color::{Color, Colorizer};
 use prettytable::{format, Row, Table};
 use redis_module::raw::KeyType;
 use redis_module::{Context, NextArg, RedisError, RedisResult, RedisValue};
+use serde::ser::Serialize;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use utils::TextNode;
@@ -39,7 +40,10 @@ fn vec_to_hashmap(values: Vec<RedisValue>) -> HashMap<String, String> {
   hashmap
 }
 
-fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
+fn to_colorized_json<T>(value: &T) -> Result<String, std::io::Error>
+where
+  T: ?Sized + Serialize,
+{
   let colorizer = Colorizer::new()
     .null(Color::Cyan)
     .boolean(Color::Yellow)
@@ -47,7 +51,11 @@ fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
     .string(Color::Green)
     .key(Color::Blue)
     .build();
+  let json = serde_json::to_string_pretty(value)?;
+  return colorizer.colorize_json_str(&json.to_string());
+}
 
+fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
   if (args.len()) != 1 {
     return Err(RedisError::WrongArity);
@@ -63,43 +71,40 @@ fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
       match hgetall {
         Ok(RedisValue::Array(array)) => {
           let hashmap: HashMap<String, String> = vec_to_hashmap(array);
-          let json = serde_json::to_string_pretty(&hashmap)?;
-          let colorized = colorizer.colorize_json_str(&json.to_string());
+          let colorized = to_colorized_json(&hashmap);
 
           return Ok(RedisValue::SimpleString(colorized.unwrap()));
         }
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
       match lrange {
         Ok(RedisValue::Array(array)) => {
           let list: Vec<String> = extract_strings(array);
-          let json = serde_json::to_string_pretty(&list)?;
-          let colorized = colorizer.colorize_json_str(&json.to_string());
+          let colorized = to_colorized_json(&list);
 
           return Ok(RedisValue::SimpleString(colorized.unwrap()));
         }
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
       match smembers {
         Ok(RedisValue::Array(array)) => {
           let list: Vec<String> = extract_strings(array);
-          let json = serde_json::to_string_pretty(&list)?;
-          let colorized = colorizer.colorize_json_str(&json.to_string());
+          let colorized = to_colorized_json(&list);
 
           return Ok(RedisValue::SimpleString(colorized.unwrap()));
         }
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     _ => return Err(RedisError::WrongType),
   };
 }
@@ -134,7 +139,7 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
       match lrange {
@@ -150,7 +155,7 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
       match smembers {
@@ -166,7 +171,7 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     _ => return Err(RedisError::WrongType),
   };
 }
@@ -203,7 +208,7 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
       match lrange {
@@ -221,7 +226,7 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
       match smembers {
@@ -239,7 +244,7 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     _ => return Err(RedisError::WrongType),
   };
 }
@@ -273,7 +278,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
       match lrange {
@@ -281,7 +286,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
           let list: Vec<String> = extract_strings(array);
           let mut html_list = build_html::Container::new(ContainerType::OrderedList);
           for e in list {
-            let text_node = TextNode{ content: e };
+            let text_node = TextNode { content: e };
             html_list = html_list.add_html(Box::new(text_node));
           }
 
@@ -290,7 +295,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
       match smembers {
@@ -298,7 +303,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
           let set: Vec<String> = extract_strings(array);
           let mut html_list = build_html::Container::new(ContainerType::UnorderedList);
           for e in set {
-            let text_node = TextNode{ content: e };
+            let text_node = TextNode { content: e };
             html_list = html_list.add_html(Box::new(text_node));
           }
 
@@ -307,7 +312,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
         Ok(_) => return Ok(RedisValue::Null),
         Err(_) => return Err(RedisError::Str("ERR key not found")),
       }
-    },
+    }
     _ => return Err(RedisError::WrongType),
   };
 }
