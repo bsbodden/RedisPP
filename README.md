@@ -1,6 +1,7 @@
 # RedisPP
 
-RedisPP (RePP) is a [Redis](https://redis.io/) module that adds Pretty Printing capabilities.
+RedisPP (RePP) is a [Redis](https://redis.io/) module that adds Pretty Printing capabilities
+to the [`redis-cli`](https://redis.io/topics/rediscli)
 
 ## Primary features:
 
