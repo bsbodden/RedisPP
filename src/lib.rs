@@ -13,45 +13,59 @@ use build_html::*;
 use redis_module::raw::KeyType;
 use redis_module::{Context, NextArg, RedisError, RedisResult};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use ascii::ascii::{to_ascii_table, to_titled_ascii_table};
-use html::html::{html_list_from_vector, html_table_from_hashmap};
-use json::json::to_colorized_json;
-use utils::utils::{extract_strings, process_redis_result, vec_to_hashmap};
+use ascii::{to_ascii_table, to_titled_ascii_table};
+use html::{html_list_from_vector, html_table_from_hashmap};
+use json::{to_json};
+use utils::{extract_strings, process_redis_result, vec_to_hashmap, PPOptions, PPCommands};
+
+const MIN_ARGS: usize = 1;
+const MAX_ARGS: usize = 2;
 
 fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
-  if (args.len()) != 1 {
+  let args_card = args.len();
+  if args_card < MIN_ARGS || args_card > MAX_ARGS {
     return Err(RedisError::WrongArity);
   }
 
   let src = args.next_string()?;
+  let mut options = HashSet::new();
+
+  while let Some(s) = args.next() {
+    match s.to_uppercase().as_str() {
+      "PB" => options.insert(PPOptions::PBCopy),
+      _ => break,
+    };
+  }
+
   let key = ctx.open_key(&src);
   let ktype = key.key_type();
 
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      return process_redis_result(hgetall, |array| {
+      return process_redis_result(PPCommands::PPJ, hgetall, options, |array| {
         let hashmap: HashMap<String, String> = vec_to_hashmap(array);
-        return to_colorized_json(&hashmap).unwrap();
+        return to_json(&hashmap).unwrap();
       });
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      return process_redis_result(lrange, |array| {
+      return process_redis_result(PPCommands::PPJ, lrange, options, |array| {
         let list: Vec<String> = extract_strings(array);
 
-        return to_colorized_json(&list).unwrap();
+        return to_json(&list).unwrap();
       });
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      return process_redis_result(smembers, |array| {
+      return process_redis_result(PPCommands::PPJ, smembers, options, |array| {
         let set: Vec<String> = extract_strings(array);
 
-        return to_colorized_json(&set).unwrap();
+        return to_json(&set).unwrap();
       });
     }
     _ => return Err(RedisError::WrongType),
@@ -60,18 +74,28 @@ fn pp_j(ctx: &Context, args: Vec<String>) -> RedisResult {
 
 fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
-  if (args.len()) != 1 {
+  let args_card = args.len();
+  if args_card < MIN_ARGS || args_card > MAX_ARGS {
     return Err(RedisError::WrongArity);
   }
 
   let src = args.next_string()?;
+  let mut options = HashSet::new();
+
+  while let Some(s) = args.next() {
+    match s.to_uppercase().as_str() {
+      "PB" => options.insert(PPOptions::PBCopy),
+      _ => break,
+    };
+  }
+
   let key = ctx.open_key(&src);
   let ktype = key.key_type();
 
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      return process_redis_result(hgetall, |array| {
+      return process_redis_result(PPCommands::PPT, hgetall, options, |array| {
         let hashmap: HashMap<String, String> = vec_to_hashmap(array);
         let titles = Vec::from_iter(hashmap.keys());
         let values = Vec::from_iter(hashmap.values());
@@ -81,7 +105,7 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      return process_redis_result(lrange, |array| {
+      return process_redis_result(PPCommands::PPT, lrange, options, |array| {
         let strings = extract_strings(array);
         let list = strings
           .iter()
@@ -96,7 +120,7 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      return process_redis_result(smembers, |array| {
+      return process_redis_result(PPCommands::PPT, smembers, options, |array| {
         let strings: Vec<String> = extract_strings(array);
         let set = strings
           .iter()
@@ -115,18 +139,28 @@ fn pp_t(ctx: &Context, args: Vec<String>) -> RedisResult {
 
 fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
-  if (args.len()) != 1 {
+  let args_card = args.len();
+  if args_card < MIN_ARGS || args_card > MAX_ARGS {
     return Err(RedisError::WrongArity);
   }
 
   let src = args.next_string()?;
+  let mut options = HashSet::new();
+
+  while let Some(s) = args.next() {
+    match s.to_uppercase().as_str() {
+      "PB" => options.insert(PPOptions::PBCopy),
+      _ => break,
+    };
+  }
+
   let key = ctx.open_key(&src);
   let ktype = key.key_type();
 
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      return process_redis_result(hgetall, |array| {
+      return process_redis_result(PPCommands::PPC, hgetall, options, |array| {
         let hashmap: HashMap<String, String> = vec_to_hashmap(array);
         let titles = Vec::from_iter(hashmap.keys());
         let values = Vec::from_iter(hashmap.values());
@@ -145,7 +179,7 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      return process_redis_result(lrange, |array| {
+      return process_redis_result(PPCommands::PPC, lrange, options, |array| {
         let strings: Vec<String> = extract_strings(array);
         let list = strings
           .iter()
@@ -168,7 +202,7 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      return process_redis_result(smembers, |array| {
+      return process_redis_result(PPCommands::PPC, smembers, options, |array| {
         let strings: Vec<String> = extract_strings(array);
         let set = strings
           .iter()
@@ -195,18 +229,28 @@ fn pp_c(ctx: &Context, args: Vec<String>) -> RedisResult {
 
 fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
   let mut args = args.into_iter().skip(1);
-  if (args.len()) != 1 {
+  let args_card = args.len();
+  if args_card < MIN_ARGS || args_card > MAX_ARGS {
     return Err(RedisError::WrongArity);
   }
 
   let src = args.next_string()?;
+  let mut options = HashSet::new();
+
+  while let Some(s) = args.next() {
+    match s.to_uppercase().as_str() {
+      "PB" => options.insert(PPOptions::PBCopy),
+      _ => break,
+    };
+  }
+
   let key = ctx.open_key(&src);
   let ktype = key.key_type();
 
   match ktype {
     KeyType::Hash => {
       let hgetall = ctx.call("HGETALL", &[&src]);
-      return process_redis_result(hgetall, |array| {
+      return process_redis_result(PPCommands::PPH, hgetall, options, |array| {
         let hashmap: HashMap<String, String> = vec_to_hashmap(array);
 
         return html_table_from_hashmap(hashmap);
@@ -214,7 +258,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
     }
     KeyType::List => {
       let lrange = ctx.call("LRANGE", &[&src, "0", "-1"]);
-      return process_redis_result(lrange, |array| {
+      return process_redis_result(PPCommands::PPH, lrange, options, |array| {
         let list: Vec<String> = extract_strings(array);
 
         return html_list_from_vector(list, ContainerType::OrderedList);
@@ -222,7 +266,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
     }
     KeyType::Set => {
       let smembers = ctx.call("SMEMBERS", &[&src]);
-      return process_redis_result(smembers, |array| {
+      return process_redis_result(PPCommands::PPH, smembers, options, |array| {
         let set: Vec<String> = extract_strings(array);
 
         return html_list_from_vector(set, ContainerType::UnorderedList);

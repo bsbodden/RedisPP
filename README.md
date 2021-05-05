@@ -8,6 +8,7 @@ RedisPP (RePP) is a [Redis](https://redis.io/) module that adds Pretty Printing 
 * ASCII Table output for: Hashes, List, Sets
 * CSV output for: Hashes, List, Sets
 * HTML Table output for: Hashes, List, Sets
+* Ability to copy output to Pasteboard (Clipboard) use `PB` argument
 
 ## Commands
 
