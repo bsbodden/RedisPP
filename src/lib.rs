@@ -279,7 +279,7 @@ fn pp_h(ctx: &Context, args: Vec<String>) -> RedisResult {
 //////////////////////////////////////////////////////
 
 redis_module! {
-    name: "pp",
+    name: "repp",
     version: 1,
     data_types: [],
     commands: [
